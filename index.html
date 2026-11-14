@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-019N8X8CC8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-019N8X8CC8');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Covenant — Credit Stress Tester</title>
+  <meta name="description" content="Model a company's debt stack, then stress it: leverage and coverage covenants, a five-year cash flow projection, an EBITDA × rates breach grid, the maturity wall and an absolute-priority recovery waterfall with the fulcrum security. Runs in your browser." />
+  <meta property="og:title" content="Covenant — Credit Stress Tester" />
+  <meta property="og:description" content="Debt stack, covenant headroom, stress grid, maturity wall and recovery waterfall — a leveraged-finance toolkit computed live in your browser." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://debjitmukherjee1.github.io/covenant/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Covenant — Credit Stress Tester" />
+  <meta name="twitter:description" content="Covenant headroom, stress grid, maturity wall and recovery waterfall, computed live in your browser." />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..500&family=Geist:wght@300..600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/suite.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <script src="vendor/chart.umd.min.js"></script>
+  <script src="js/suite-charts.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="monogram" viewBox="0 0 48 48" width="46" height="46" aria-hidden="true">
+        <circle cx="24" cy="24" r="22" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5" />
+        <rect x="14" y="13" width="20" height="5" rx="1.5" fill="var(--accent)" />
+        <rect x="14" y="21" width="20" height="5" rx="1.5" fill="none" stroke="var(--accent)" stroke-width="1.4" />
+        <rect x="14" y="29" width="20" height="5" rx="1.5" fill="none" stroke="var(--accent-soft)" stroke-width="1.4" stroke-dasharray="2 2" />
+      </svg>
+      <div class="brand-text">
+        <h1>Coven<span>ant</span></h1>
+        <p class="tagline">Build the debt stack, then break it — covenants, maturities, recoveries.</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="run-note">$0/day · runs entirely client-side · no server, no data</div>
+    </div>
+  </header>
+
+  <div class="disclaimer-banner">
+    <strong>Personal, educational tool — not investment or credit advice, not a credit rating, not SEBI-registered research.</strong> Presets are fictional companies; every assumption is stated on the Method tab.
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <span class="tab-indicator" id="tab-indicator"></span>
+    <button class="tab active" data-tab="structure" role="tab" aria-selected="true" aria-controls="structure">Structure</button>
+    <button class="tab" data-tab="stress" role="tab" aria-selected="false" aria-controls="stress">Stress</button>
+    <button class="tab" data-tab="maturities" role="tab" aria-selected="false" aria-controls="maturities">Maturities</button>
+    <button class="tab" data-tab="recovery" role="tab" aria-selected="false" aria-controls="recovery">Recovery</button>
+    <button class="tab" data-tab="method" role="tab" aria-selected="false" aria-controls="method">Method</button>
+  </nav>
+
+  <main>
+    <div class="scenario-bar glass">
+      <div class="field">
+        <label for="preset">Start from</label>
+        <select id="preset">
+          <option value="lbo">Harbor Logistics — sponsor buyout</option>
+          <option value="ig">Ashby Industrial — investment grade</option>
+          <option value="stressed">Corvel Retail — stressed</option>
+          <option value="custom" hidden>Custom (edited)</option>
+        </select>
+      </div>
+      <div class="field"><label for="co-name">Company</label><input type="text" id="co-name" maxlength="40" /></div>
+      <div class="field field--units"><label for="co-units">Units</label><input type="text" id="co-units" maxlength="6" /></div>
+      <div class="scenario-actions">
+        <button class="btn btn-sm" id="copy-link">Copy shareable link</button>
+        <span class="copied" id="copied" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <!-- ============================ STRUCTURE ============================ -->
+    <section id="structure" class="panel active" role="tabpanel">
+      <h2>Capital structure</h2>
+      <hr class="rule" />
+      <p class="lede">Lay out the company's operating profile and every tranche of debt. Covenant reads the stack the way a leveraged-finance desk would: leverage through each tranche, all-in cost, liquidity and how close today's numbers sit to the covenants.</p>
+
+      <div class="kpis" id="struct-kpis"></div>
+
+      <div class="ladder card" id="ladder-card">
+        <div class="chart-head"><div><div class="chart-title">Leverage ladder</div><p class="chart-sub">turns of EBITDA through each tranche, senior to junior</p></div></div>
+        <div class="ladder-bar" id="ladder"></div>
+        <div class="ladder-legend" id="ladder-legend"></div>
+      </div>
+
+      <div class="grid-2 inputs-grid">
+        <div class="card">
+          <h3>Operating profile</h3>
+          <div class="fields" id="op-fields"></div>
+        </div>
+        <div class="card">
+          <h3>Revolver</h3>
+          <div class="fields" id="rcf-fields"></div>
+          <h3 class="h3-gap">Maintenance covenants</h3>
+          <div class="fields" id="cov-fields"></div>
+        </div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <div><div class="chart-title">Debt stack</div><p class="chart-sub">edit any cell · float rates are a spread over the base rate</p></div>
+          <button class="btn-outline btn-sm" id="add-tranche">Add tranche</button>
+        </div>
+        <div class="table-scroll"><table class="data stack-edit" id="stack-edit"></table></div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head"><div><div class="chart-title">Cap table</div><p class="chart-sub">all-in rates at today's base rate · "through" is cumulative leverage</p></div></div>
+        <div class="table-scroll"><table class="data" id="cap-table"></table></div>
+      </div>
+    </section>
+
+    <!-- ============================ STRESS ============================ -->
+    <section id="stress" class="panel" role="tabpanel">
+      <h2>Stress test</h2>
+      <hr class="rule" />
+      <p class="lede">Shock EBITDA, move rates, close the refinancing market — then watch five years of cash flow, covenant tests and liquidity respond. The grid below shows which combinations trip a covenant in the first year.</p>
+
+      <div class="kpis" id="stress-kpis"></div>
+
+      <div class="grid-in">
+        <div class="card">
+          <h3>Scenario</h3>
+          <div class="seg scen-presets" id="scen-presets" role="group" aria-label="Scenario presets">
+            <button data-s="base" class="active">Base</button><button data-s="recession">Recession</button><button data-s="rates">Rate spike</button><button data-s="stag">Stagflation</button>
+          </div>
+          <div class="sliders">
+            <div class="slider-field"><label class="label" for="s-ebitda">EBITDA shock</label><output id="o-ebitda"></output><input type="range" id="s-ebitda" min="-60" max="20" step="1" /></div>
+            <div class="slider-field"><label class="label" for="s-rate">Base-rate shock</label><output id="o-rate"></output><input type="range" id="s-rate" min="-200" max="500" step="25" /></div>
+            <div class="slider-field"><label class="label" for="s-growth">EBITDA growth, per year</label><output id="o-growth"></output><input type="range" id="s-growth" min="-10" max="15" step="0.5" /></div>
+            <div class="slider-field"><label class="label" for="s-sweep">Excess cash sweep</label><output id="o-sweep"></output><input type="range" id="s-sweep" min="0" max="100" step="5" /></div>
+          </div>
+          <div class="field section-gap">
+            <span class="label">Refinancing market</span>
+            <div class="seg" id="refi-toggle" role="group" aria-label="Refinancing market">
+              <button data-refi="1" class="active" aria-pressed="true">Open — maturities roll</button><button data-refi="0" aria-pressed="false">Shut — repay from cash</button>
+            </div>
+          </div>
+        </div>
+        <div class="stack-col">
+          <div class="chart-block">
+            <div class="chart-head"><div class="chart-title">Net leverage against the covenant</div></div>
+            <div class="chart-wrap chart-wrap--short"><canvas id="lev-chart" role="img" aria-label="Net leverage by year"></canvas></div>
+          </div>
+          <div class="chart-block">
+            <div class="chart-head"><div class="chart-title">Interest cover and liquidity</div></div>
+            <div class="chart-wrap chart-wrap--short"><canvas id="cov-chart" role="img" aria-label="Interest cover and liquidity by year"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head"><div class="chart-title">Five-year projection</div><span class="chart-sub" id="proj-units"></span></div>
+        <div class="table-scroll"><table class="data" id="proj-table"></table></div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <div><div class="chart-title">Breach grid</div><p class="chart-sub">year-one net leverage · rows: EBITDA shock · columns: base-rate shock</p></div>
+          <div class="legend-row"><span><span class="dot" style="background:var(--bull)"></span>headroom over 15%</span><span><span class="dot" style="background:var(--warn)"></span>under 15%</span><span><span class="dot" style="background:var(--bear)"></span>breach</span></div>
+        </div>
+        <div class="table-scroll"><table class="data heat" id="heat"></table></div>
+      </div>
+    </section>
+
+    <!-- ============================ MATURITIES ============================ -->
+    <section id="maturities" class="panel" role="tabpanel">
+      <h2>Maturity wall</h2>
+      <hr class="rule" />
+      <p class="lede">When each piece of debt falls due, including scheduled amortisation. Maturities inside two years that liquidity cannot cover are what turn a weak credit into a distressed one.</p>
+
+      <div class="kpis" id="mat-kpis"></div>
+
+      <div class="chart-block">
+        <div class="chart-head">
+          <div class="chart-title">Debt due by year</div>
+          <div class="seg" id="rcf-mode" role="group" aria-label="Revolver treatment">
+            <button data-full="0" class="active" aria-pressed="true">Revolver as drawn</button><button data-full="1" aria-pressed="false">Full commitment</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="wall-chart" role="img" aria-label="Maturity wall"></canvas></div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head"><div class="chart-title">Schedule</div></div>
+        <div class="table-scroll"><table class="data" id="wall-table"></table></div>
+      </div>
+    </section>
+
+    <!-- ============================ RECOVERY ============================ -->
+    <section id="recovery" class="panel" role="tabpanel">
+      <h2>Recovery waterfall</h2>
+      <hr class="rule" />
+      <p class="lede">If the company restructures, what is it worth and who gets paid? Distressed enterprise value flows down the stack by absolute priority. The class where value runs out is the fulcrum — the debt that converts into the new equity.</p>
+
+      <div class="kpis" id="rec-kpis"></div>
+
+      <div class="grid-in">
+        <div class="card">
+          <h3>Distressed valuation</h3>
+          <div class="sliders">
+            <div class="slider-field"><label class="label" for="r-ebitda">Distressed EBITDA, % of LTM</label><output id="o-rebitda"></output><input type="range" id="r-ebitda" min="30" max="110" step="1" value="70" /></div>
+            <div class="slider-field"><label class="label" for="r-mult">EV / EBITDA multiple</label><output id="o-rmult"></output><input type="range" id="r-mult" min="2" max="12" step="0.25" value="6" /></div>
+            <div class="slider-field"><label class="label" for="r-admin">Administrative and priority claims</label><output id="o-radmin"></output><input type="range" id="r-admin" min="0" max="15" step="0.5" value="5" /></div>
+          </div>
+          <div class="field section-gap">
+            <span class="label">Revolver at default</span>
+            <div class="seg" id="rec-rcf" role="group" aria-label="Revolver at default">
+              <button data-full="1" class="active" aria-pressed="true">Fully drawn</button><button data-full="0" aria-pressed="false">As today</button>
+            </div>
+          </div>
+          <p class="muted small fine">Borrowers usually draw the revolver in full on the way into default, which is why fully drawn is the market convention.</p>
+        </div>
+        <div class="chart-block">
+          <div class="chart-head"><div class="chart-title">Where the value goes</div></div>
+          <div class="waterfall" id="waterfall"></div>
+        </div>
+      </div>
+
+      <div class="chart-block">
+        <div class="chart-head"><div class="chart-title">Recovery by tranche</div></div>
+        <div class="table-scroll"><table class="data" id="rec-table"></table></div>
+      </div>
+    </section>
+
+    <!-- ============================ METHOD ============================ -->
+    <section id="method" class="panel" role="tabpanel">
+      <h2>Method</h2>
+      <hr class="rule" />
+      <div class="prose">
+        <p class="lede">An annual model, kept deliberately transparent: every figure on the other tabs comes from the formulas below, and the source of each is a plain JavaScript function you can read in <code>js/model.js</code>.</p>
+        <h3>Structure</h3>
+        <ul>
+          <li><strong>All-in rate</strong> — fixed tranches pay their coupon; floating tranches pay base rate + spread, floored at zero. Undrawn revolver pays a 0.35% commitment fee.</li>
+          <li><strong>Net leverage</strong> = (total debt − cash) ÷ LTM EBITDA. <strong>Interest cover</strong> = EBITDA ÷ cash interest.</li>
+          <li><strong>Leverage through a tranche</strong> — cumulative debt down to and including that tranche, in turns of EBITDA, the way term sheets quote it.</li>
+          <li><strong>Indicative band</strong> — maps net leverage and interest cover to a letter band using round-number thresholds and takes the weaker of the two. It is a teaching heuristic, not a rating and not a substitute for an agency's methodology.</li>
+        </ul>
+        <h3>Projection</h3>
+        <ul>
+          <li>EBITDA grows at the chosen rate from LTM, with the shock applied from year one onward.</li>
+          <li>Interest accrues on opening balances. Cash tax = tax rate × (EBITDA − D&amp;A − interest), floored at zero.</li>
+          <li>Free cash flow = EBITDA − interest − tax − capex − change in working capital and other.</li>
+          <li>Scheduled amortisation is paid each year. With the refinancing market <strong>open</strong>, maturing debt rolls for five years on the same terms; <strong>shut</strong>, it must be repaid from cash, then the revolver.</li>
+          <li>Cash below the minimum is topped up from the revolver while it is available. Anything still short is a <strong>liquidity shortfall</strong> and counts as a breach.</li>
+          <li>Excess cash above the minimum is swept, at the chosen percentage, to the revolver first and then to floating-rate debt by seniority.</li>
+        </ul>
+        <h3>Recovery</h3>
+        <ul>
+          <li>Distressed EV = distressed EBITDA × multiple. Administrative and priority claims come off the top.</li>
+          <li>The remainder pays claims by rank — first lien (with the revolver), second lien, senior unsecured, subordinated — pro rata within a rank. Claims are principal only; accrued interest and make-wholes are ignored.</li>
+          <li>The <strong>fulcrum</strong> is the most senior class that is not paid in full.</li>
+        </ul>
+        <h3>What it leaves out</h3>
+        <ul>
+          <li>Intra-year timing, hedging, PIK toggles, EBITDA add-backs, equity cures, springing-covenant tests and deficiency claims of secured lenders against unsecured value.</li>
+          <li>Presets are invented companies built to show three typical credit profiles. They do not describe any real issuer.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Covenant · built by Debjit Mukherjee · <a href="https://github.com/debjitmukherjee1/covenant" target="_blank" rel="noopener">Source on GitHub</a><br>
+    No data, no server calls — every number is computed by your own browser. Hosting: GitHub Pages.</p>
+    <p class="sibling-links">Also in this suite:
+      <a href="https://debjitmukherjee1.github.io/meridian/" target="_blank" rel="noopener">Meridian</a> ·
+      <a href="https://debjitmukherjee1.github.io/marketpulse/" target="_blank" rel="noopener">MarketPulse</a> ·
+      <a href="https://debjitmukherjee1.github.io/ledger/" target="_blank" rel="noopener">Ledger</a> ·
+      <a href="https://debjitmukherjee1.github.io/abacus/" target="_blank" rel="noopener">Abacus</a> ·
+      <a href="https://debjitmukherjee1.github.io/tenline/" target="_blank" rel="noopener">Tenline</a> ·
+      <a href="https://debjitmukherjee1.github.io/tenor/" target="_blank" rel="noopener">Tenor</a> ·
+      <a href="https://debjitmukherjee1.github.io/redline/" target="_blank" rel="noopener">Redline</a>
+    </p>
+  </footer>
+
+  <script src="js/tabs.js"></script>
+  <script type="module" src="js/app.js"></script>
+  <script src="js/suite.js"></script>
+</body>
+</html>
