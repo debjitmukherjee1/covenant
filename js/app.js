@@ -25,7 +25,7 @@ const pct = (v, d = 1) => (v == null || !isFinite(v) ? "—" : v.toFixed(d) + "%
 const signed = (v, d = 0, suf = "") => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + suf;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const kpi = (label, value, unit, sub, cls = "") =>
-  `<div class="kpi"><span class="label">${label}</span><div class="value ${cls}">${value}${unit ? `<small>${unit}</small>` : ""}</div><div class="sub">${sub || "&nbsp;"}</div></div>`;
+  `<div class="kpi"><span class="label">${label}</span><div class="value ${cls}">${value}${unit ? `<small>${esc(unit)}</small>` : ""}</div><div class="sub">${sub || "&nbsp;"}</div></div>`;
 const chip = (text, tone) => `<span class="chip ${tone}">${text}</span>`;
 
 // ---------- state <-> URL ---------------------------------------------------
@@ -33,12 +33,30 @@ function encode() {
   const json = JSON.stringify({ v: 1, p: preset, S, stress, rec });
   return btoa(unescape(encodeURIComponent(json))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+// A shared link is untrusted input: keep only plain numbers, short plain text
+// and booleans, drop anything else (red-team finding, 23-Nov-2026).
+function clean(v, depth = 0) {
+  if (depth > 6) return undefined;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (typeof v === "boolean" || v === null) return v;
+  if (typeof v === "string") return v.replace(/[<>"'`&\\]/g, "").slice(0, 60);
+  if (Array.isArray(v)) return v.slice(0, 40).map((x) => clean(x, depth + 1));
+  if (typeof v === "object") {
+    const out = {};
+    for (const k of Object.keys(v).slice(0, 60)) {
+      if (k === "__proto__" || k === "constructor" || k === "prototype") continue;
+      out[k] = clean(v[k], depth + 1);
+    }
+    return out;
+  }
+  return undefined;
+}
 function decode(str) {
   try {
     const b = str.replace(/-/g, "+").replace(/_/g, "/");
     const o = JSON.parse(decodeURIComponent(escape(atob(b))));
     if (!o || !o.S || !Array.isArray(o.S.tranches)) return null;
-    return o;
+    return clean(o);
   } catch { return null; }
 }
 let urlTimer;
